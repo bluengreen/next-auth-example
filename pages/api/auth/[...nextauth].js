@@ -6,6 +6,10 @@ import GithubProvider from "next-auth/providers/github"
 import TwitterProvider from "next-auth/providers/twitter"
 import Auth0Provider from "next-auth/providers/auth0"
 // import AppleProvider from "next-auth/providers/apple"
+// import jwt from "jsonwebtoken";
+// import jose from 'jose'
+// import { JWT as jwt } from 'jose'
+
 
 // For more information on each option (and a full list of options) go to
 // https://next-auth.js.org/configuration/options
@@ -88,12 +92,40 @@ export default NextAuth({
     // A secret to use for key generation (you should set this explicitly)
     // secret: 'INp8IvdIyeMcoGAgFGoA61DdBglwwSqnXJZkgz8PSnw',
     secret: process.env.SECRET,
+    verificationOptions: {
+      algorithms: ['HS256']
+    },
+
     // Set to true to use encryption (default: false)
     // encryption: true,
     // You can define your own encode/decode functions for signing and encryption
     // if you want to override the default behaviour.
     // encode: async ({ secret, token, maxAge }) => {},
     // decode: async ({ secret, token, maxAge }) => {},
+    // hasura gql jwt
+    // encode: async ({ secret, token, maxAge }) => {
+    //   const jwtClaims = {
+    //     "sub": token.id.toString() ,
+    //     "name": token.name ,
+    //     "email": token.email,
+    //     "iat": Date.now() / 1000,
+    //     "exp": Math.floor(Date.now() / 1000) + (24*60*60),
+    //     "https://hasura.io/jwt/claims": {
+    //       "x-hasura-allowed-roles": ["user"],
+    //       "x-hasura-default-role": "user",
+    //       "x-hasura-role": "user",
+    //       "x-hasura-user-id": token.id,
+    //     }
+    //   };
+    //   const encodedToken = jose.JWT.sign(jwtClaims, secret, { algorithm: 'HS256'});
+    //   return encodedToken;
+    // },
+    // decode: async ({ secret, token, maxAge }) => {
+    //   // return jose.JWT.verify(tokenToVerify, _signingKey, verificationOptions)
+    //   const decodedToken = jose.JWT.verify(token, secret, { algorithms: ['HS256']});
+    //   return decodedToken;
+    // },
+
   },
 
   // You can define custom pages to override the built-in ones. These will be regular Next.js pages
@@ -117,6 +149,23 @@ export default NextAuth({
     // async redirect({ url, baseUrl }) { return baseUrl },
     // async session({ session, token, user }) { return session },
     // async jwt({ token, user, account, profile, isNewUser }) { return token }
+    // hasura gql
+    async session(session, token, user) {
+      const encodedToken = jwt.sign(token, process.env.SECRET, { algorithm: 'HS256'});
+      session.id = token.id;
+      session.token = encodedToken;
+      return Promise.resolve(session);
+    },
+    async jwt(token, user, account, profile, isNewUser) {
+      const isUserSignedIn = user ? true : false;
+      // make a http call to our graphql api
+      // store this in postgres
+
+      if(isUserSignedIn) {
+        token.id = user.id.toString();
+      }
+      return Promise.resolve(token);
+    }
   },
 
   // Events are useful for logging
