@@ -6,13 +6,19 @@ import GithubProvider from "next-auth/providers/github"
 import TwitterProvider from "next-auth/providers/twitter"
 import Auth0Provider from "next-auth/providers/auth0"
 // import AppleProvider from "next-auth/providers/apple"
-// import jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import jose from 'jose'
-// import { JWT as jwt } from 'jose'
+
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
+
 
 // For more information on each option (and a full list of options) go to
 // https://next-auth.js.org/configuration/options
 export default NextAuth({
+  adapter: PrismaAdapter(prisma),
   // https://next-auth.js.org/configuration/providers
   providers: [
     EmailProvider({
@@ -114,15 +120,15 @@ export default NextAuth({
           "x-hasura-allowed-roles": ["user"],
           "x-hasura-default-role": "user",
           "x-hasura-role": "user",
-          "x-hasura-user-id": token.id,
+          "x-hasura-user-id": token.id
         }
       };
-      const encodedToken = jose.JWT.sign(jwtClaims, secret, { algorithm: 'HS256' });
+      const encodedToken = jwt.sign(jwtClaims, secret, { algorithm: 'HS256' });
       return encodedToken;
     },
     decode: async ({ secret, token, maxAge }) => {
       // return jose.JWT.verify(tokenToVerify, _signingKey, verificationOptions)
-      const decodedToken = jose.JWT.verify(token, secret, { algorithms: ['HS256']});
+      const decodedToken = jwt.verify(token, secret, { algorithms: ['HS256']});
       return decodedToken;
     },
 
@@ -152,7 +158,7 @@ export default NextAuth({
 
     // hasura gql
     async session({session, token, user}) {
-      const encodedToken = jose.JWT.sign(token, process.env.SECRET, { algorithm: 'HS256'});
+      const encodedToken = jwt.sign(token, process.env.SECRET, { algorithm: 'HS256'});
       session.id = token.id;
       session.token = encodedToken;
       return Promise.resolve(session);
@@ -175,7 +181,7 @@ export default NextAuth({
 
   // You can set the theme to 'light', 'dark' or use 'auto' to default to the
   // whatever prefers-color-scheme is set to in the browser. Default is 'auto'
-  theme: 'light',
+  theme: 'dark',
 
   // Enable debug messages in the console if you are having problems
   debug: false,
