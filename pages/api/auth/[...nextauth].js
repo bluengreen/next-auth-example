@@ -96,11 +96,11 @@ export default NextAuth({
   jwt: {
     // A secret to use for key generation (you should set this explicitly)
     // secret: 'INp8IvdIyeMcoGAgFGoA61DdBglwwSqnXJZkgz8PSnw',
-    signingKey: {"kty":"oct","kid":"yQYb4Q5QLyXNAxLrpG1tvFkZjg73NJ172tx-2ybR1Kw","alg":"HS256","k":"2GStilhCG4P6gqURKRf1_nXXlRY9P8AiDTHOo_X0kK0"},
     secret: process.env.SECRET,
-    verificationOptions: {
-      algorithms: ['HS256']
-    },
+    signingKey: process.env.SIGNING_KEY,
+    // verificationOptions: {
+    //   algorithms: ['HS512','HS256']
+    // },
 
     // Set to true to use encryption (default: false)
     // encryption: true,
@@ -108,8 +108,9 @@ export default NextAuth({
     // if you want to override the default behaviour.
     // encode: async ({ secret, token, maxAge }) => {},
     // decode: async ({ secret, token, maxAge }) => {},
+
     // hasura gql jwt
-    encode: async ({ secret, token, maxAge }) => {
+    encode: async ({ token, secret, signingKey, maxAge }) => {
       const jwtClaims = {
         "sub": token.id,
         "name": token.name ,
@@ -123,14 +124,55 @@ export default NextAuth({
           "x-hasura-user-id": token.id
         }
       };
-      const encodedToken = jwt.sign(jwtClaims, secret, { algorithm: 'HS256' });
-      return encodedToken;
+
+      const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
+      const signedToken = jose.JWT.sign(jwtClaims, _signingKey, { algorithm: 'HS512' });
+      // const encodedToken = jwt.sign(jwtClaims, secret, { algorithm: 'HS256' });
+      return signedToken;
     },
     decode: async ({ secret, token, maxAge }) => {
-      // return jose.JWT.verify(tokenToVerify, _signingKey, verificationOptions)
-      const decodedToken = jwt.verify(token, secret, { algorithms: ['HS256']});
-      return decodedToken;
+      const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
+      return jose.JWT.verify(token, _signingKey, { algorithm: 'HS512' })
+      //const decodedToken = jwt.verify(token, secret, { algorithms: ['HS256']});
+      //return decodedToken;
     },
+
+  // encode: async ({
+  //     token = {},
+  //     maxAge = DEFAULT_MAX_AGE,
+  //     secret,
+  //     signingKey,
+  //     signingOptions = {
+  //       expiresIn: `${maxAge}s`,
+  //     },
+  //     // encryptionKey,
+  //     // encryptionOptions = {
+  //     //   alg: "dir",
+  //     //   enc: DEFAULT_ENCRYPTION_ALGORITHM,
+  //     //   zip: "DEF",
+  //     // },
+  //     // encryption = DEFAULT_ENCRYPTION_ENABLED,
+  //   }) => {
+  //     // Signing Key
+  //     const _signingKey = signingKey
+  //       ? jose.JWK.asKey(JSON.parse(signingKey))
+  //       : getDerivedSigningKey(secret)
+  //
+  //     // Sign token
+  //     const signedToken = jose.JWT.sign(token, _signingKey, signingOptions)
+  //
+  //     // if (encryption) {
+  //     //   // Encryption Key
+  //     //   const _encryptionKey = encryptionKey
+  //     //     ? jose.JWK.asKey(JSON.parse(encryptionKey))
+  //     //     : getDerivedEncryptionKey(secret)
+  //     //
+  //     //   // Encrypt token
+  //     //   return jose.JWE.encrypt(signedToken, _encryptionKey, encryptionOptions)
+  //     // }
+  //     return signedToken
+  //   }
+
 
   },
 
@@ -158,18 +200,24 @@ export default NextAuth({
 
     // hasura gql
     async session({session, token, user}) {
-      const encodedToken = jwt.sign(token, process.env.SECRET, { algorithm: 'HS256'});
-      session.id = token.id;
-      session.token = encodedToken;
-      return Promise.resolve(session);
+
+      const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
+      const signedToken = jose.JWT.sign(token, _signingKey, { algorithm: 'HS512' });
+      // console.log(user);
+      //const encodedToken = jose.JWT.sign(token, process.env.SECRET, { algorithm: 'HS512'});
+      // session.id = user.id;
+      session.token = signedToken;
+      return session;
     },
     async jwt({token, user, account, profile, isNewUser}) {
+      // console.log(user);
       const isUserSignedIn = user ? true : false;
       // make a http call to our graphql api
       // store this in postgres
 
       if(isUserSignedIn) {
         token.id = user.id.toString();
+        token.user = user;
       }
       return Promise.resolve(token);
     }
