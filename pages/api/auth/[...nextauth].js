@@ -7,9 +7,8 @@ import TwitterProvider from "next-auth/providers/twitter"
 import Auth0Provider from "next-auth/providers/auth0"
 // import AppleProvider from "next-auth/providers/apple"
 // import jwt from "jsonwebtoken";
-// import jose from 'jose'
+import jose from 'jose'
 // import { JWT as jwt } from 'jose'
-
 
 // For more information on each option (and a full list of options) go to
 // https://next-auth.js.org/configuration/options
@@ -91,6 +90,7 @@ export default NextAuth({
   jwt: {
     // A secret to use for key generation (you should set this explicitly)
     // secret: 'INp8IvdIyeMcoGAgFGoA61DdBglwwSqnXJZkgz8PSnw',
+    signingKey: {"kty":"oct","kid":"yQYb4Q5QLyXNAxLrpG1tvFkZjg73NJ172tx-2ybR1Kw","alg":"HS256","k":"2GStilhCG4P6gqURKRf1_nXXlRY9P8AiDTHOo_X0kK0"},
     secret: process.env.SECRET,
     verificationOptions: {
       algorithms: ['HS256']
@@ -103,28 +103,28 @@ export default NextAuth({
     // encode: async ({ secret, token, maxAge }) => {},
     // decode: async ({ secret, token, maxAge }) => {},
     // hasura gql jwt
-    // encode: async ({ secret, token, maxAge }) => {
-    //   const jwtClaims = {
-    //     "sub": token.id.toString() ,
-    //     "name": token.name ,
-    //     "email": token.email,
-    //     "iat": Date.now() / 1000,
-    //     "exp": Math.floor(Date.now() / 1000) + (24*60*60),
-    //     "https://hasura.io/jwt/claims": {
-    //       "x-hasura-allowed-roles": ["user"],
-    //       "x-hasura-default-role": "user",
-    //       "x-hasura-role": "user",
-    //       "x-hasura-user-id": token.id,
-    //     }
-    //   };
-    //   const encodedToken = jose.JWT.sign(jwtClaims, secret, { algorithm: 'HS256'});
-    //   return encodedToken;
-    // },
-    // decode: async ({ secret, token, maxAge }) => {
-    //   // return jose.JWT.verify(tokenToVerify, _signingKey, verificationOptions)
-    //   const decodedToken = jose.JWT.verify(token, secret, { algorithms: ['HS256']});
-    //   return decodedToken;
-    // },
+    encode: async ({ secret, token, maxAge }) => {
+      const jwtClaims = {
+        "sub": token.id,
+        "name": token.name ,
+        "email": token.email,
+        "iat": Date.now() / 1000,
+        "exp": Math.floor(Date.now() / 1000) + (24*60*60),
+        "https://hasura.io/jwt/claims": {
+          "x-hasura-allowed-roles": ["user"],
+          "x-hasura-default-role": "user",
+          "x-hasura-role": "user",
+          "x-hasura-user-id": token.id,
+        }
+      };
+      const encodedToken = jose.JWT.sign(jwtClaims, secret, { algorithm: 'HS256' });
+      return encodedToken;
+    },
+    decode: async ({ secret, token, maxAge }) => {
+      // return jose.JWT.verify(tokenToVerify, _signingKey, verificationOptions)
+      const decodedToken = jose.JWT.verify(token, secret, { algorithms: ['HS256']});
+      return decodedToken;
+    },
 
   },
 
@@ -149,14 +149,15 @@ export default NextAuth({
     // async redirect({ url, baseUrl }) { return baseUrl },
     // async session({ session, token, user }) { return session },
     // async jwt({ token, user, account, profile, isNewUser }) { return token }
+
     // hasura gql
-    async session(session, token, user) {
-      const encodedToken = jwt.sign(token, process.env.SECRET, { algorithm: 'HS256'});
+    async session({session, token, user}) {
+      const encodedToken = jose.JWT.sign(token, process.env.SECRET, { algorithm: 'HS256'});
       session.id = token.id;
       session.token = encodedToken;
       return Promise.resolve(session);
     },
-    async jwt(token, user, account, profile, isNewUser) {
+    async jwt({token, user, account, profile, isNewUser}) {
       const isUserSignedIn = user ? true : false;
       // make a http call to our graphql api
       // store this in postgres
