@@ -14,7 +14,6 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-
 // For more information on each option (and a full list of options) go to
 // https://next-auth.js.org/configuration/options
 export default NextAuth({
@@ -111,22 +110,23 @@ export default NextAuth({
 
     // hasura gql jwt
     encode: async ({ token, secret, signingKey, maxAge }) => {
-      const jwtClaims = {
-        "sub": token.id,
-        "name": token.name ,
-        "email": token.email,
-        "iat": Date.now() / 1000,
-        "exp": Math.floor(Date.now() / 1000) + (24*60*60),
-        "https://hasura.io/jwt/claims": {
-          "x-hasura-allowed-roles": ["user"],
-          "x-hasura-default-role": "user",
-          "x-hasura-role": "user",
-          "x-hasura-user-id": token.id
-        }
-      };
+      // const jwtClaims = {
+      //   "sub": token.id,
+      //   "name": token.name ,
+      //   "email": token.email,
+      //   "iat": Date.now() / 1000,
+      //   "exp": Math.floor(Date.now() / 1000) + (24*60*60),
+      //   "https://hasura.io/jwt/claims": {
+      //     "x-hasura-allowed-roles": ["user"],
+      //     "x-hasura-default-role": "user",
+      //     "x-hasura-role": "user",
+      //     "raw": token,
+      //     "x-hasura-user-id": token.id
+      //   }
+      // };
 
       const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
-      const signedToken = jose.JWT.sign(jwtClaims, _signingKey, { algorithm: 'HS512' });
+      const signedToken = jose.JWT.sign(token, _signingKey, { algorithm: 'HS512' });
       // const encodedToken = jwt.sign(jwtClaims, secret, { algorithm: 'HS256' });
       return signedToken;
     },
@@ -200,7 +200,6 @@ export default NextAuth({
 
     // hasura gql
     async session({session, token, user}) {
-
       const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
       const signedToken = jose.JWT.sign(token, _signingKey, { algorithm: 'HS512' });
       // console.log(user);
@@ -210,7 +209,6 @@ export default NextAuth({
       return session;
     },
     async jwt({token, user, account, profile, isNewUser}) {
-      // console.log(user);
       const isUserSignedIn = user ? true : false;
       // make a http call to our graphql api
       // store this in postgres
