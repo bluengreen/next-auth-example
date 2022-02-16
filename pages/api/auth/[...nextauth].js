@@ -6,10 +6,18 @@ import GithubProvider from "next-auth/providers/github"
 import TwitterProvider from "next-auth/providers/twitter"
 import Auth0Provider from "next-auth/providers/auth0"
 // import AppleProvider from "next-auth/providers/apple"
+import jwt from "jsonwebtoken";
+import jose from 'jose'
+
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
 
 // For more information on each option (and a full list of options) go to
 // https://next-auth.js.org/configuration/options
 export default NextAuth({
+  adapter: PrismaAdapter(prisma),
   // https://next-auth.js.org/configuration/providers
   providers: [
     EmailProvider({
@@ -88,12 +96,84 @@ export default NextAuth({
     // A secret to use for key generation (you should set this explicitly)
     // secret: 'INp8IvdIyeMcoGAgFGoA61DdBglwwSqnXJZkgz8PSnw',
     secret: process.env.SECRET,
+    signingKey: process.env.SIGNING_KEY,
+    // verificationOptions: {
+    //   algorithms: ['HS512','HS256']
+    // },
+
     // Set to true to use encryption (default: false)
     // encryption: true,
     // You can define your own encode/decode functions for signing and encryption
     // if you want to override the default behaviour.
     // encode: async ({ secret, token, maxAge }) => {},
     // decode: async ({ secret, token, maxAge }) => {},
+
+    // hasura gql jwt
+    encode: async ({ token, secret, signingKey, maxAge }) => {
+      // const jwtClaims = {
+      //   "sub": token.id,
+      //   "name": token.name ,
+      //   "email": token.email,
+      //   "iat": Date.now() / 1000,
+      //   "exp": Math.floor(Date.now() / 1000) + (24*60*60),
+      //   "https://hasura.io/jwt/claims": {
+      //     "x-hasura-allowed-roles": ["user"],
+      //     "x-hasura-default-role": "user",
+      //     "x-hasura-role": "user",
+      //     "raw": token,
+      //     "x-hasura-user-id": token.id
+      //   }
+      // };
+
+      const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
+      const signedToken = jose.JWT.sign(token, _signingKey, { algorithm: 'HS512' });
+      // const encodedToken = jwt.sign(jwtClaims, secret, { algorithm: 'HS256' });
+      return signedToken;
+    },
+    decode: async ({ secret, token, maxAge }) => {
+      const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
+      return jose.JWT.verify(token, _signingKey, { algorithm: 'HS512' })
+      //const decodedToken = jwt.verify(token, secret, { algorithms: ['HS256']});
+      //return decodedToken;
+    },
+
+  // encode: async ({
+  //     token = {},
+  //     maxAge = DEFAULT_MAX_AGE,
+  //     secret,
+  //     signingKey,
+  //     signingOptions = {
+  //       expiresIn: `${maxAge}s`,
+  //     },
+  //     // encryptionKey,
+  //     // encryptionOptions = {
+  //     //   alg: "dir",
+  //     //   enc: DEFAULT_ENCRYPTION_ALGORITHM,
+  //     //   zip: "DEF",
+  //     // },
+  //     // encryption = DEFAULT_ENCRYPTION_ENABLED,
+  //   }) => {
+  //     // Signing Key
+  //     const _signingKey = signingKey
+  //       ? jose.JWK.asKey(JSON.parse(signingKey))
+  //       : getDerivedSigningKey(secret)
+  //
+  //     // Sign token
+  //     const signedToken = jose.JWT.sign(token, _signingKey, signingOptions)
+  //
+  //     // if (encryption) {
+  //     //   // Encryption Key
+  //     //   const _encryptionKey = encryptionKey
+  //     //     ? jose.JWK.asKey(JSON.parse(encryptionKey))
+  //     //     : getDerivedEncryptionKey(secret)
+  //     //
+  //     //   // Encrypt token
+  //     //   return jose.JWE.encrypt(signedToken, _encryptionKey, encryptionOptions)
+  //     // }
+  //     return signedToken
+  //   }
+
+
   },
 
   // You can define custom pages to override the built-in ones. These will be regular Next.js pages
@@ -117,6 +197,28 @@ export default NextAuth({
     // async redirect({ url, baseUrl }) { return baseUrl },
     // async session({ session, token, user }) { return session },
     // async jwt({ token, user, account, profile, isNewUser }) { return token }
+
+    // hasura gql
+    async session({session, token, user}) {
+      const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
+      const signedToken = jose.JWT.sign(token, _signingKey, { algorithm: 'HS512' });
+      // console.log(user);
+      //const encodedToken = jose.JWT.sign(token, process.env.SECRET, { algorithm: 'HS512'});
+      // session.id = user.id;
+      session.token = signedToken;
+      return session;
+    },
+    async jwt({token, user, account, profile, isNewUser}) {
+      const isUserSignedIn = user ? true : false;
+      // make a http call to our graphql api
+      // store this in postgres
+
+      if(isUserSignedIn) {
+        token.id = user.id.toString();
+        token.user = user;
+      }
+      return Promise.resolve(token);
+    }
   },
 
   // Events are useful for logging
@@ -125,7 +227,7 @@ export default NextAuth({
 
   // You can set the theme to 'light', 'dark' or use 'auto' to default to the
   // whatever prefers-color-scheme is set to in the browser. Default is 'auto'
-  theme: 'light',
+  theme: 'dark',
 
   // Enable debug messages in the console if you are having problems
   debug: false,
