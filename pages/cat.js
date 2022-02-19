@@ -1,6 +1,5 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import React from "react";
-import ReactDOM from "react-dom";
+import {useState} from "react";
 import {
   useQuery,
   useQueryClient,
@@ -17,7 +16,7 @@ const queryClient = new QueryClient();
 
 export default function PostPage() {
 
-  const [postId, setPostId] = React.useState(-1);
+  const [postId, setPostId] = useState(-1);
 
   return (
     <QueryClientProvider client={queryClient}>
