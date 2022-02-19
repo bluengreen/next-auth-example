@@ -114,11 +114,7 @@ export default NextAuth({
     async session({session, token, user}) {
       const _signingKey = jose.JWK.asKey(JSON.parse(process.env.SIGNING_KEY));
       const signedToken = jose.JWT.sign(token, _signingKey, { algorithm: 'HS512' });
-      // console.log(user);
-      //const encodedToken = jose.JWT.sign(token, process.env.SECRET, { algorithm: 'HS512'});
-      // session.id = user.id;
       session.accessToken = signedToken;
-      console.log( "SESSION", session);
       return session;
     },
 
