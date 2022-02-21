@@ -19,7 +19,7 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
-      "@/lib/*": ["lib/*"]
+      "@/lib/*": ["./lib/*"]
     }
   },
   "include": ["process.d.ts", "next-env.d.ts", "next-auth.d.ts", "**/*.ts", "**/*.tsx"],
