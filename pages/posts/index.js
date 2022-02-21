@@ -13,10 +13,9 @@ const endpoint = "https://graphqlzero.almansi.me/api";
 
 const queryClient = new QueryClient();
 
-
 export default function PostPage() {
 
-  const [postId, setPostId] = useState(-1);
+  const [postId, setPostId] = useState(-1); 
 
   return (
     <QueryClientProvider client={queryClient}>
