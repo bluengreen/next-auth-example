@@ -1,9 +1,11 @@
 /* This example requires Tailwind CSS v2.0+ */
 import { Fragment, useState } from 'react'
 import Link from "next/link"
+import { useRouter } from 'next/router'
 import { signIn, signOut, useSession } from "next-auth/react"
 import { Disclosure, Menu, Transition } from '@headlessui/react'
 import { BellIcon, MenuIcon, XIcon } from '@heroicons/react/outline'
+import Modal from '../Signin/modal'
 
 const navigation = [
   { name: 'Client', href: '/client', current: true },
@@ -19,6 +21,18 @@ function classNames(...classes) {
 
 export default function Example() {
   const { data: session, status } = useSession()
+  const router = useRouter();
+
+  console.log(router.pathname)
+
+  const [openSignin, setOpenSignin] = useState(false)
+
+  const selectedPublishedDate = date => {
+    console.log({"published_at": date});
+    setValue('published_at', date)
+  };
+
+  console.log(openSignin)
   const loading = status === "loading"
  
   return (    
@@ -66,10 +80,10 @@ export default function Example() {
                         key={item.name}
                         href={item.href}
                         className={classNames(
-                          item.current ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white',
+                          router.pathname == item.href ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white',
                           'px-3 py-2 rounded-md text-sm font-medium'
                         )}
-                        aria-current={item.current ? 'page' : undefined}
+                        aria-current={ router.pathname == item.href ? 'page' : undefined}
                       >
                         {item.name}
                       </a>
@@ -81,15 +95,14 @@ export default function Example() {
                 {!session && (
                   <>                    
                     <a
-                      href={`/api/auth/signin`}
-                      className='text-gray-300 hover:bg-gray-700 hover:text-white'
-                      onClick={(e) => {
-                        e.preventDefault()
-                        signIn()
-                      }}
+                      href='#'
+                      className='text-gray-300 hover:bg-gray-700 hover:text-white'                      
+                      onClick={() => signIn()}
                     >
                       Sign in
                     </a>
+
+                    <Modal setFunction={setOpenSignin} />
                   </>
                 )}
 

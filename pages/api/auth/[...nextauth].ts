@@ -104,6 +104,9 @@ export default NextAuth({
     colorScheme: "light",
   },
   debug: false,  
+  // pages: {
+  //   signIn: '/auth/signin',
+  // },
   callbacks: {
     // async jwt({ token }) {
     //   token.userRole = "admin"
