@@ -1,5 +1,5 @@
 // import Header from "./header"
-import Header from "./Header2"
+import Header from "./Nav"
 import Footer from "./footer"
 import type { ReactChildren } from "react"
 
