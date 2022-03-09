@@ -4,6 +4,8 @@ import FacebookProvider from "next-auth/providers/facebook"
 import GithubProvider from "next-auth/providers/github"
 import TwitterProvider from "next-auth/providers/twitter"
 import Auth0Provider from "next-auth/providers/auth0"
+import CredentialsProvider from "next-auth/providers/credentials";
+
 // import AppleProvider from "next-auth/providers/apple"
 // import EmailProvider from "next-auth/providers/email"
 
@@ -38,6 +40,67 @@ export default NextAuth({
       },
     }),
     */
+    CredentialsProvider({
+      // https://blog.devso.io/implementing-credentials-provider-on-nextjs-and-nextauth/
+
+      /* 
+       wordpress example with jwt-authentication-for-wp-rest-api plugin 
+
+       http:localhost:8080/wp-json/jwt-auth/v1/token
+       https://github.com/nextauthjs/next-auth/issues/3970#issuecomment-1046347097
+       
+       update db to port users
+       update db to capture wp login account type
+       update jwt to inclue more info 
+
+       */
+
+      // The name to display on the sign in form (e.g. "Sign in with...")
+      name: "Account",
+      // The credentials is used to generate a suitable form on the sign in page.
+      // You can specify whatever fields you are expecting to be submitted.
+      // e.g. domain, username, password, 2FA token, etc.
+      // You can pass any HTML attribute to the <input> tag through the object.
+      credentials: {
+        username: { label: "Username", type: "text", placeholder: "jsmith" },
+        password: {  label: "Password", type: "password" }
+      },
+      async authorize(credentials, req) {
+        // Add logic here to look up the user from the credentials supplied
+        
+        const headers = { 'Content-Type': 'application/json' }
+
+        // var apiHost = 'http://yourdomain.com/wp-json';
+        var requestOptions = {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(credentials),
+          redirect: 'follow'
+        };
+        
+        // fetch("http://localhost:8080/wp-json/jwt-auth/v1/token", requestOptions)
+        //   .then(response => response.text())
+        //   .then(result => console.log(result))
+        //   .catch(error => console.log('error', error)
+        // );
+        
+        const res = await fetch('http://localhost:8080/wp-json/jwt-auth/v1/token', requestOptions)
+        const json = await res.json()
+        console.log(json);
+
+        const user = { id: 1, name: "J Smith", email: "jsmith@example.com" }
+        
+        if (user) {
+          // Any object returned will be saved in `user` property of the JWT
+          return user
+        } else {
+          // If you return null then an error will be displayed advising the user to check their details.
+          return null
+  
+          // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
+        }
+      }
+    }),
     FacebookProvider({
       clientId: process.env.FACEBOOK_ID,
       clientSecret: process.env.FACEBOOK_SECRET,
